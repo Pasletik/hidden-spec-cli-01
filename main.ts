@@ -613,21 +613,13 @@ function parseV4a(lines: string[]): V4aSection[] {
 function applyChunks(fs: FileState, chunks: Chunk[], strict: boolean, path: string): string[] {
   let lines = [...fs.lines];
   let cursor = 0;
-  const tiers = strict ? [0] : [0, 1, 2];
   for (const chunk of chunks) {
     if (chunk.anchor !== null) {
-      let found = -1;
-      for (const t of tiers) {
-        for (let k = cursor; k < lines.length; k += 1) {
-          if (lineEq(lines[k]!, chunk.anchor, t)) {
-            found = k;
-            break;
-          }
-        }
-        if (found >= 0) break;
-      }
-      if (found < 0) throw new Fail('no-match', path);
-      cursor = found + 1;
+      // the anchor is a single old line: the first line at or after the cursor
+      // equal to it at the first tier where one is (SPEC section 8)
+      const m = findMatch(lines, [chunk.anchor], strict, cursor);
+      if (m === null) throw new Fail('no-match', path);
+      cursor = m.positions[0]! + 1;
     }
     const old: string[] = [];
     const neu: NewLine[] = [];
